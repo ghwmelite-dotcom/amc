@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Shield, CheckCircle, XCircle, AlertTriangle, Clock, FileText,
-  Award, Users, Calendar, Download, Eye, ChevronRight, Lock,
+  Award, Calendar, Download, Eye, ChevronRight, Lock,
   ClipboardCheck, Building2, Activity, TrendingUp
 } from 'lucide-react';
 import { clsx } from 'clsx';

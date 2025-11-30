@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Database, Server, Cloud, Shield, RefreshCw, CheckCircle,
   XCircle, AlertTriangle, Settings, Activity, Zap, Link2,
@@ -219,7 +219,7 @@ const Integrations: React.FC = () => {
 
           {/* Connection Lines & Systems */}
           <div className="grid grid-cols-4 gap-4">
-            {integrations.slice(0, 8).map((integration, i) => (
+            {integrations.slice(0, 8).map((integration) => (
               <div
                 key={integration.id}
                 className={clsx(
