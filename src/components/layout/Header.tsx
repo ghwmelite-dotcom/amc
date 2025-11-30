@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell, Plus, X } from 'lucide-react';
+import { Bell, Plus, X, Crown, Briefcase, Building2, ChevronDown, Eye } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAppStore } from '../../stores/appStore';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
 import Button from '../common/Button';
 import Card3D from '../common/Card3D';
+
+type ViewMode = 'executive' | 'operations' | 'department';
+
+const viewModes: { id: ViewMode; label: string; icon: React.ReactNode; description: string; color: string }[] = [
+  { id: 'executive', label: 'CEO View', icon: <Crown className="w-4 h-4" />, description: 'Strategic KPIs & financials', color: '#FFD700' },
+  { id: 'operations', label: 'Operations', icon: <Briefcase className="w-4 h-4" />, description: 'Daily operations & staff', color: '#00D4AA' },
+  { id: 'department', label: 'Department', icon: <Building2 className="w-4 h-4" />, description: 'Department-specific view', color: '#667EEA' },
+];
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -16,12 +24,16 @@ const pageTitles: Record<string, string> = {
   '/reports': 'Analytics',
   '/patients': 'Patients',
   '/emergency': 'Emergency',
+  '/integrations': 'System Integrations',
+  '/compliance': 'Compliance & Audit',
   '/settings': 'Settings',
 };
 
 export const Header: React.FC = () => {
   const location = useLocation();
   const [time, setTime] = useState(new Date());
+  const [currentView, setCurrentView] = useState<ViewMode>('operations');
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
   const {
     showNotifications,
     setShowNotifications,
@@ -30,6 +42,7 @@ export const Header: React.FC = () => {
     dismissNotification,
     soundEnabled,
     openModal,
+    addToast,
   } = useAppStore();
   const { playSound } = useSoundEffects();
 
@@ -39,6 +52,15 @@ export const Header: React.FC = () => {
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const currentViewData = viewModes.find((v) => v.id === currentView)!;
+
+  const handleViewChange = (view: ViewMode) => {
+    if (soundEnabled) playSound('success');
+    setCurrentView(view);
+    setShowViewDropdown(false);
+    const viewData = viewModes.find((v) => v.id === view)!;
+    addToast(`Switched to ${viewData.label}`, 'success');
+  };
 
   const handleNotificationToggle = () => {
     if (soundEnabled) playSound('click');
@@ -74,6 +96,67 @@ export const Header: React.FC = () => {
 
       {/* Right side */}
       <div className="flex items-center gap-4">
+        {/* View Mode Toggle */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              if (soundEnabled) playSound('click');
+              setShowViewDropdown(!showViewDropdown);
+            }}
+            className="glass-card p-3 px-4 flex items-center gap-3 hover:bg-white/[0.04] transition-colors"
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: `${currentViewData.color}20`, color: currentViewData.color }}
+            >
+              {currentViewData.icon}
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-medium flex items-center gap-2">
+                {currentViewData.label}
+                <ChevronDown className={clsx('w-3 h-3 transition-transform', showViewDropdown && 'rotate-180')} />
+              </div>
+              <div className="text-[10px] text-white/40">{currentViewData.description}</div>
+            </div>
+          </button>
+
+          {/* View Dropdown */}
+          {showViewDropdown && (
+            <div className="absolute right-0 top-full mt-2 w-64 glass-card p-2 animate-fade-in-up z-50">
+              <div className="flex items-center gap-2 px-3 py-2 mb-2 border-b border-white/10">
+                <Eye className="w-4 h-4 text-amc-teal" />
+                <span className="text-sm font-medium">Switch View</span>
+              </div>
+              {viewModes.map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => handleViewChange(mode.id)}
+                  className={clsx(
+                    'w-full flex items-center gap-3 p-3 rounded-xl transition-colors',
+                    currentView === mode.id
+                      ? 'bg-white/10'
+                      : 'hover:bg-white/5'
+                  )}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ backgroundColor: `${mode.color}20`, color: mode.color }}
+                  >
+                    {mode.icon}
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="text-sm font-medium">{mode.label}</div>
+                    <div className="text-xs text-white/50">{mode.description}</div>
+                  </div>
+                  {currentView === mode.id && (
+                    <div className="w-2 h-2 rounded-full bg-amc-green" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Time Display */}
         <div className="glass-card p-4 px-7 flex items-center gap-5">
           <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amc-teal via-amc-blue to-amc-purple p-[2px] animate-spin-slow">

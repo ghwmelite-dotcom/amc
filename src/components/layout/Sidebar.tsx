@@ -10,7 +10,9 @@ import {
   BarChart3,
   UserPlus,
   AlertTriangle,
-  Settings
+  Settings,
+  Link2,
+  Shield
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
@@ -25,6 +27,8 @@ const navItems = [
   { id: 'reports', icon: BarChart3, label: 'Analytics', color: '#00D26A', path: '/reports' },
   { id: 'patients', icon: UserPlus, label: 'Patients', color: '#FF6B7A', path: '/patients' },
   { id: 'emergency', icon: AlertTriangle, label: 'Emergency', color: '#FF4757', path: '/emergency' },
+  { id: 'integrations', icon: Link2, label: 'Integrations', color: '#00CED1', path: '/integrations' },
+  { id: 'compliance', icon: Shield, label: 'Compliance', color: '#8B5CF6', path: '/compliance' },
   { id: 'settings', icon: Settings, label: 'Settings', color: '#9B59B6', path: '/settings' },
 ];
 

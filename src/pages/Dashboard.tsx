@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
+import { Brain, TrendingUp, AlertTriangle, Users, BedDouble, Clock, Sparkles, Activity } from 'lucide-react';
 import Card3D from '../components/common/Card3D';
 import StatCard from '../components/common/StatCard';
 import Avatar from '../components/common/Avatar';
@@ -13,6 +14,7 @@ import { getShiftColor } from '../utils/formatters';
 
 const Dashboard: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState(0);
+  const [aiInsightIndex, setAiInsightIndex] = useState(0);
   const { notifications, soundEnabled } = useAppStore();
   const { playSound } = useSoundEffects();
 
@@ -20,6 +22,58 @@ const Dashboard: React.FC = () => {
     if (soundEnabled) playSound('click');
     setSelectedDay(index);
   };
+
+  // AI Insights data
+  const aiInsights = [
+    {
+      id: 1,
+      type: 'prediction',
+      icon: <TrendingUp className="w-5 h-5" />,
+      title: 'Patient Surge Predicted',
+      description: 'ER volume expected to increase 40% tomorrow 2-4 PM based on historical patterns',
+      severity: 'warning',
+      action: 'Pre-schedule 3 additional nurses',
+      confidence: 94
+    },
+    {
+      id: 2,
+      type: 'optimization',
+      icon: <Users className="w-5 h-5" />,
+      title: 'Staff Optimization',
+      description: 'Night shift in Cardiology is understaffed. Coverage drops to 67% after 10 PM',
+      severity: 'critical',
+      action: 'Reassign 2 nurses from Pediatrics',
+      confidence: 91
+    },
+    {
+      id: 3,
+      type: 'forecast',
+      icon: <BedDouble className="w-5 h-5" />,
+      title: 'Bed Capacity Alert',
+      description: 'ICU projected to reach 95% capacity by Friday based on current admission rate',
+      severity: 'warning',
+      action: 'Review discharge schedule',
+      confidence: 87
+    },
+    {
+      id: 4,
+      type: 'insight',
+      icon: <Clock className="w-5 h-5" />,
+      title: 'Wait Time Anomaly',
+      description: 'Average wait time in OPD increased 23% this week. Bottleneck at registration',
+      severity: 'info',
+      action: 'Add temporary registration desk',
+      confidence: 89
+    }
+  ];
+
+  // Rotate AI insights every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAiInsightIndex((prev) => (prev + 1) % aiInsights.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const stats = [
     {
@@ -71,6 +125,105 @@ const Dashboard: React.FC = () => {
           <StatCard key={i} {...stat} delay={i * 100} />
         ))}
       </div>
+
+      {/* AI Insights Panel */}
+      <Card3D
+        intensity={8}
+        className="glass-card p-6 opacity-0 animate-fade-in-up animation-delay-200 relative overflow-hidden"
+      >
+        {/* Animated gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-r from-amc-purple/5 via-amc-teal/5 to-amc-blue/5 animate-gradient-shift" />
+
+        <div className="relative">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amc-purple to-amc-blue flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  AI-Powered Insights
+                  <Sparkles className="w-4 h-4 text-amc-teal animate-pulse" />
+                </h2>
+                <p className="text-xs text-white/50">Real-time predictions & recommendations</p>
+              </div>
+            </div>
+            <Badge variant="info" dot pulse>
+              <Activity className="w-3 h-3 mr-1" />
+              Analyzing
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4">
+            {aiInsights.map((insight, i) => (
+              <Card3D
+                key={insight.id}
+                intensity={15}
+                onClick={() => {
+                  if (soundEnabled) playSound('click');
+                  setAiInsightIndex(i);
+                }}
+                className={clsx(
+                  'p-4 rounded-xl cursor-pointer transition-all duration-300',
+                  i === aiInsightIndex
+                    ? insight.severity === 'critical'
+                      ? 'bg-amc-red/15 border border-amc-red/30'
+                      : insight.severity === 'warning'
+                        ? 'bg-amc-orange/15 border border-amc-orange/30'
+                        : 'bg-amc-blue/15 border border-amc-blue/30'
+                    : 'bg-white/[0.02] border border-white/5 hover:bg-white/[0.04]'
+                )}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={clsx(
+                    'w-9 h-9 rounded-lg flex items-center justify-center',
+                    insight.severity === 'critical' && 'bg-amc-red/20 text-amc-red',
+                    insight.severity === 'warning' && 'bg-amc-orange/20 text-amc-orange',
+                    insight.severity === 'info' && 'bg-amc-blue/20 text-amc-blue'
+                  )}>
+                    {insight.icon}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-white/40">Confidence</div>
+                    <div className={clsx(
+                      'text-sm font-bold',
+                      insight.confidence >= 90 ? 'text-amc-green' : 'text-amc-teal'
+                    )}>
+                      {insight.confidence}%
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="font-semibold text-sm mb-1">{insight.title}</h3>
+                <p className="text-xs text-white/50 line-clamp-2 mb-3">{insight.description}</p>
+
+                {i === aiInsightIndex && (
+                  <div className="pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2 text-xs">
+                      <AlertTriangle className="w-3 h-3 text-amc-teal" />
+                      <span className="text-amc-teal font-medium">{insight.action}</span>
+                    </div>
+                  </div>
+                )}
+              </Card3D>
+            ))}
+          </div>
+
+          {/* Insight progress indicator */}
+          <div className="flex justify-center gap-1.5 mt-4">
+            {aiInsights.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setAiInsightIndex(i)}
+                className={clsx(
+                  'h-1 rounded-full transition-all duration-300',
+                  i === aiInsightIndex ? 'w-6 bg-amc-teal' : 'w-1.5 bg-white/20 hover:bg-white/40'
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      </Card3D>
 
       {/* Main Grid */}
       <div className="grid grid-cols-[1fr_420px] gap-6">

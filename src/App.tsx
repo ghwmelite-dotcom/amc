@@ -11,6 +11,8 @@ import Leave from './pages/Leave';
 import Reports from './pages/Reports';
 import Patients from './pages/Patients';
 import Emergency from './pages/Emergency';
+import Integrations from './pages/Integrations';
+import Compliance from './pages/Compliance';
 import Settings from './pages/Settings';
 
 const App: React.FC = () => {
@@ -25,6 +27,8 @@ const App: React.FC = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/patients" element={<Patients />} />
         <Route path="/emergency" element={<Emergency />} />
+        <Route path="/integrations" element={<Integrations />} />
+        <Route path="/compliance" element={<Compliance />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </MainLayout>
