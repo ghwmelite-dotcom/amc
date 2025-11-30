@@ -3,7 +3,6 @@ import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
-import Badge from '../components/common/Badge';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useAppStore } from '../stores/appStore';
 import { getShiftColor } from '../utils/formatters';

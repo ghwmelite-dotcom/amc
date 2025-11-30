@@ -1,6 +1,5 @@
 import React from 'react';
-import { Users, Activity, TrendingUp, Calendar } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Users, Activity } from 'lucide-react';
 import Card3D from '../components/common/Card3D';
 import Badge from '../components/common/Badge';
 import DonutChart from '../components/charts/DonutChart';

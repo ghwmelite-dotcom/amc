@@ -10,6 +10,7 @@ interface Card3DProps {
   intensity?: number;
   disabled?: boolean;
   glareEnabled?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const Card3D: React.FC<Card3DProps> = ({
@@ -19,6 +20,7 @@ export const Card3D: React.FC<Card3DProps> = ({
   intensity = 15,
   disabled = false,
   glareEnabled = true,
+  style,
 }) => {
   const [transform, setTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg)');
   const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 });
@@ -88,6 +90,7 @@ export const Card3D: React.FC<Card3DProps> = ({
       style={{
         transform,
         transformStyle: 'preserve-3d',
+        ...style,
       }}
     >
       {/* Glare effect */}

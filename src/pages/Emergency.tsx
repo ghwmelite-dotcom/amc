@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Phone, Ambulance, Heart, Activity, Users, Clock } from 'lucide-react';
+import { AlertTriangle, Phone, Truck, Heart, Activity, Users, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
@@ -122,7 +122,7 @@ const Emergency: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {emergencyCases.map((emergency, i) => (
+              {emergencyCases.map((emergency) => (
                 <Card3D
                   key={emergency.id}
                   intensity={10}
@@ -170,7 +170,7 @@ const Emergency: React.FC = () => {
           {/* Ambulance Status */}
           <Card3D intensity={5} className="glass-card p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Ambulance className="w-5 h-5 text-amc-orange" />
+              <Truck className="w-5 h-5 text-amc-orange" />
               Ambulance Fleet
             </h3>
             <div className="grid grid-cols-3 gap-4">

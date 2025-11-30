@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Grid, List, Filter, X, Mail, Phone, Award } from 'lucide-react';
+import { Search, Plus, Grid, List, Mail, Phone, Award } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';

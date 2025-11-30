@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Clock, User, Building2, AlertCircle } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Search, Plus, Clock, User, Building2 } from 'lucide-react';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
@@ -119,7 +118,7 @@ const Patients: React.FC = () => {
               Patient Queue
             </h3>
             <div className="space-y-3">
-              {filteredPatients.map((patient, i) => (
+              {filteredPatients.map((patient) => (
                 <Card3D
                   key={patient.id}
                   intensity={10}
@@ -185,7 +184,7 @@ const Patients: React.FC = () => {
               Today's Appointments
             </h3>
             <div className="space-y-3">
-              {todayAppointments.map((apt, i) => (
+              {todayAppointments.map((apt) => (
                 <div
                   key={apt.id}
                   className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.05]"
@@ -215,7 +214,7 @@ const Patients: React.FC = () => {
                 .filter((d) => d.patientCount > 0)
                 .sort((a, b) => b.patientCount - a.patientCount)
                 .slice(0, 6)
-                .map((dept, i) => (
+                .map((dept) => (
                   <div key={dept.id} className="flex items-center gap-3">
                     <span className="text-xl">{dept.icon}</span>
                     <div className="flex-1">

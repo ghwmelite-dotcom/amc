@@ -1,3 +1,5 @@
+import { LucideIcon } from 'lucide-react';
+
 export interface Staff {
   id: string;
   name: string;
@@ -99,7 +101,7 @@ export interface DayData {
 
 export interface NavItem {
   id: string;
-  icon: React.ReactNode;
+  icon: LucideIcon;
   label: string;
   color: string;
   path: string;
