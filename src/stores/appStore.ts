@@ -26,6 +26,7 @@ interface AppState {
 
   // Leave Requests
   leaveRequests: LeaveRequest[];
+  addLeaveRequest: (request: LeaveRequest) => void;
   approveLeave: (id: string) => void;
   rejectLeave: (id: string) => void;
 
@@ -85,6 +86,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   // Leave Requests
   leaveRequests: leaveRequestData,
+  addLeaveRequest: (request) =>
+    set((state) => ({ leaveRequests: [...state.leaveRequests, request] })),
   approveLeave: (id) =>
     set((state) => ({
       leaveRequests: state.leaveRequests.map((l) =>

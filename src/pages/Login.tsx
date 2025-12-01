@@ -101,7 +101,7 @@ export const Login: React.FC = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent mb-2">
             Accra Medical Centre
           </h1>
-          <p className="text-white/50 text-lg">Staff Management Portal</p>
+          <p className="text-white/50 text-lg">Complete Staff Scheduler System</p>
         </div>
 
         {/* Login Card */}

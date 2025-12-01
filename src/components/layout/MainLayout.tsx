@@ -5,6 +5,7 @@ import Header from './Header';
 import { ParticleSystem } from '../effects/ParticleSystem';
 import { MorphingShapes } from '../effects/MorphingShapes';
 import { GridPattern } from '../effects/GridPattern';
+import QuickAddModal from '../common/QuickAddModal';
 import { useAppStore } from '../../stores/appStore';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
@@ -13,7 +14,7 @@ interface MainLayoutProps {
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const { sidebarExpanded, toasts, removeToast } = useAppStore();
+  const { sidebarExpanded, toasts, removeToast, activeModal, closeModal } = useAppStore();
 
   // Auto-remove toasts after 5 seconds
   useEffect(() => {
@@ -80,6 +81,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
         ))}
       </div>
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        isOpen={activeModal === 'quick-add'}
+        onClose={closeModal}
+      />
     </div>
   );
 };

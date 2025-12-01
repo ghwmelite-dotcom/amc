@@ -305,7 +305,7 @@ interface ChatState {
 
   // Actions
   setActiveChannel: (channelId: string) => void;
-  sendMessage: (channelId: string, content: string, senderId: string, senderName: string, senderAvatar: string, senderRole: string) => void;
+  sendMessage: (channelId: string, content: string, senderId: string, senderName: string, senderAvatar: string, senderRole: string, attachment?: { id: string; type: string; name: string; url: string; size: number }) => void;
   addReaction: (messageId: string, emoji: string, userId: string) => void;
   removeReaction: (messageId: string, emoji: string, userId: string) => void;
   markChannelRead: (channelId: string) => void;
@@ -314,6 +314,7 @@ interface ChatState {
   togglePinChannel: (channelId: string) => void;
   setUserOnline: (userId: string, online: boolean) => void;
   setTyping: (channelId: string, userId: string, isTyping: boolean) => void;
+  addChannel: (channel: ChatChannel) => void;
 }
 
 // Group messages by channel
@@ -339,7 +340,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().markChannelRead(channelId);
   },
 
-  sendMessage: (channelId, content, senderId, senderName, senderAvatar, senderRole) => {
+  sendMessage: (channelId, content, senderId, senderName, senderAvatar, senderRole, attachment) => {
     const newMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       channelId,
@@ -349,6 +350,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       senderRole,
       content,
       timestamp: new Date().toISOString(),
+      attachments: attachment ? [{
+        id: attachment.id,
+        type: attachment.type as 'image' | 'file' | 'link',
+        name: attachment.name,
+        url: attachment.url,
+        size: attachment.size,
+      }] : undefined,
     };
 
     set((state) => ({
@@ -455,6 +463,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         typingUsers: { ...state.typingUsers, [channelId]: channelTyping },
       };
     });
+  },
+
+  addChannel: (channel) => {
+    set((state) => ({
+      channels: [...state.channels, channel],
+      messages: {
+        ...state.messages,
+        [channel.id]: [],
+      },
+    }));
   },
 }));
 

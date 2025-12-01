@@ -1,0 +1,12 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="24" fill="#05080F"/>
+  <defs>
+    <linearGradient id="gradient" x1="48" y1="48" x2="144" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00D4AA"/>
+      <stop offset="1" stop-color="#0066FF"/>
+    </linearGradient>
+  </defs>
+  <path d="M96 32L48 80V144L96 160L144 144V80L96 32Z" fill="url(#gradient)" opacity="0.2"/>
+  <path d="M96 48L60 84V132L96 144L132 132V84L96 48Z" stroke="url(#gradient)" stroke-width="3" fill="none"/>
+  <text x="96" y="108" font-family="Inter, system-ui, sans-serif" font-size="36" font-weight="700" fill="white" text-anchor="middle">AMC</text>
+</svg>
