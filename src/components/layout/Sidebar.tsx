@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import {
   LayoutDashboard,
@@ -12,30 +12,55 @@ import {
   AlertTriangle,
   Settings,
   Link2,
-  Shield
+  Shield,
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
+import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../common/Avatar';
+import { UserPermissions } from '../../types';
 
-const navItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', color: '#00D4AA', path: '/' },
-  { id: 'schedule', icon: Calendar, label: 'Schedule', color: '#0066FF', path: '/schedule' },
-  { id: 'staff', icon: Users, label: 'Staff', color: '#667EEA', path: '/staff' },
+interface NavItem {
+  id: string;
+  icon: React.FC<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  color: string;
+  path: string;
+  permission?: keyof UserPermissions;
+}
+
+const navItems: NavItem[] = [
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', color: '#00D4AA', path: '/', permission: 'canViewDashboard' },
+  { id: 'schedule', icon: Calendar, label: 'Schedule', color: '#0066FF', path: '/schedule', permission: 'canViewSchedule' },
+  { id: 'staff', icon: Users, label: 'Staff', color: '#667EEA', path: '/staff', permission: 'canViewAllStaff' },
   { id: 'departments', icon: Building2, label: 'Departments', color: '#FF6B35', path: '/departments' },
-  { id: 'leave', icon: CalendarOff, label: 'Leave', color: '#FFB020', path: '/leave' },
-  { id: 'reports', icon: BarChart3, label: 'Analytics', color: '#00D26A', path: '/reports' },
-  { id: 'patients', icon: UserPlus, label: 'Patients', color: '#FF6B7A', path: '/patients' },
-  { id: 'emergency', icon: AlertTriangle, label: 'Emergency', color: '#FF4757', path: '/emergency' },
-  { id: 'integrations', icon: Link2, label: 'Integrations', color: '#00CED1', path: '/integrations' },
-  { id: 'compliance', icon: Shield, label: 'Compliance', color: '#8B5CF6', path: '/compliance' },
+  { id: 'leave', icon: CalendarOff, label: 'Leave', color: '#FFB020', path: '/leave', permission: 'canViewSchedule' },
+  { id: 'reports', icon: BarChart3, label: 'Analytics', color: '#00D26A', path: '/reports', permission: 'canViewReports' },
+  { id: 'patients', icon: UserPlus, label: 'Patients', color: '#FF6B7A', path: '/patients', permission: 'canViewPatients' },
+  { id: 'emergency', icon: AlertTriangle, label: 'Emergency', color: '#FF4757', path: '/emergency', permission: 'canViewEmergency' },
+  { id: 'chat', icon: MessageSquare, label: 'Staff Chat', color: '#00CED1', path: '/chat', permission: 'canViewChat' },
+  { id: 'integrations', icon: Link2, label: 'Integrations', color: '#17A2B8', path: '/integrations', permission: 'canViewIntegrations' },
+  { id: 'compliance', icon: Shield, label: 'Compliance', color: '#8B5CF6', path: '/compliance', permission: 'canViewCompliance' },
   { id: 'settings', icon: Settings, label: 'Settings', color: '#9B59B6', path: '/settings' },
 ];
 
+const roleLabels: Record<string, string> = {
+  ceo: 'CEO',
+  doctor: 'Doctor',
+  nurse: 'Nurse',
+  technician: 'Technician',
+  admin: 'Administrator',
+  receptionist: 'Receptionist',
+};
+
 export const Sidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { sidebarExpanded, setSidebarExpanded, soundEnabled } = useAppStore();
   const { playSound } = useSoundEffects();
+  const { user, logout, hasPermission } = useAuth();
 
   const handleMouseEnter = () => {
     setSidebarExpanded(true);
@@ -45,6 +70,23 @@ export const Sidebar: React.FC = () => {
   const handleNavClick = () => {
     if (soundEnabled) playSound('whoosh');
   };
+
+  const handleLogout = () => {
+    if (soundEnabled) playSound('click');
+    logout();
+    navigate('/login');
+  };
+
+  // Filter nav items based on user permissions
+  const filteredNavItems = navItems.filter(item => {
+    if (!item.permission) return true;
+    return hasPermission(item.permission);
+  });
+
+  const staffType = user?.role === 'ceo' ? 'doctor' :
+                    user?.role === 'technician' ? 'tech' :
+                    user?.role === 'receptionist' ? 'admin' :
+                    user?.role || 'admin';
 
   return (
     <aside
@@ -73,8 +115,8 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-2">
-        {navItems.map((item) => {
+      <nav className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar">
+        {filteredNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
 
@@ -116,22 +158,41 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* User */}
-      <div className={clsx(
-        'flex items-center gap-3 rounded-2xl transition-all duration-300',
-        sidebarExpanded ? 'p-4 bg-white/[0.03]' : 'justify-center'
-      )}>
-        <Avatar
-          name="Dr. Cynthia Opoku-Akoto"
-          initials="CO"
-          type="doctor"
-          size="md"
-        />
-        {sidebarExpanded && (
-          <div className="animate-fade-in">
-            <div className="font-semibold text-sm text-white">Dr. Opoku-Akoto</div>
-            <div className="text-xs text-white/50">Administrator</div>
-          </div>
-        )}
+      <div className="mt-4 space-y-2">
+        <div className={clsx(
+          'flex items-center gap-3 rounded-2xl transition-all duration-300',
+          sidebarExpanded ? 'p-4 bg-white/[0.03]' : 'justify-center'
+        )}>
+          <Avatar
+            name={user?.name || 'User'}
+            initials={user?.avatar || 'U'}
+            type={staffType as 'doctor' | 'nurse' | 'tech' | 'admin'}
+            size="md"
+          />
+          {sidebarExpanded && user && (
+            <div className="animate-fade-in flex-1 min-w-0">
+              <div className="font-semibold text-sm text-white truncate">
+                {user.name.split(' ').slice(0, 2).join(' ')}
+              </div>
+              <div className="text-xs text-white/50">{roleLabels[user.role] || user.role}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className={clsx(
+            'flex items-center gap-3 rounded-2xl transition-all duration-300 w-full',
+            sidebarExpanded ? 'px-4 py-3' : 'p-3 justify-center',
+            'text-white/40 hover:text-amc-red hover:bg-amc-red/10'
+          )}
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {sidebarExpanded && (
+            <span className="text-sm font-medium animate-fade-in">Sign Out</span>
+          )}
+        </button>
       </div>
     </aside>
   );

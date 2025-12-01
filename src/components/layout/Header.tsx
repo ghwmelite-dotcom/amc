@@ -1,18 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Bell, Plus, X, Crown, Briefcase, Building2, ChevronDown, Eye } from 'lucide-react';
+import { Bell, Plus, X, Crown, Briefcase, Building2, ChevronDown, Eye, Stethoscope, UserCog } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAppStore } from '../../stores/appStore';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
+import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
 import Card3D from '../common/Card3D';
 
-type ViewMode = 'executive' | 'operations' | 'department';
+type ViewMode = 'executive' | 'operations' | 'department' | 'clinical' | 'support';
 
-const viewModes: { id: ViewMode; label: string; icon: React.ReactNode; description: string; color: string }[] = [
-  { id: 'executive', label: 'CEO View', icon: <Crown className="w-4 h-4" />, description: 'Strategic KPIs & financials', color: '#FFD700' },
-  { id: 'operations', label: 'Operations', icon: <Briefcase className="w-4 h-4" />, description: 'Daily operations & staff', color: '#00D4AA' },
-  { id: 'department', label: 'Department', icon: <Building2 className="w-4 h-4" />, description: 'Department-specific view', color: '#667EEA' },
+interface ViewModeConfig {
+  id: ViewMode;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+  color: string;
+  roles: string[];
+}
+
+const allViewModes: ViewModeConfig[] = [
+  { id: 'executive', label: 'CEO View', icon: <Crown className="w-4 h-4" />, description: 'Strategic KPIs & financials', color: '#FFD700', roles: ['ceo', 'admin'] },
+  { id: 'operations', label: 'Operations', icon: <Briefcase className="w-4 h-4" />, description: 'Daily operations & staff', color: '#00D4AA', roles: ['ceo', 'admin', 'doctor'] },
+  { id: 'clinical', label: 'Clinical', icon: <Stethoscope className="w-4 h-4" />, description: 'Patient care & treatments', color: '#FF6B7A', roles: ['ceo', 'doctor', 'nurse'] },
+  { id: 'department', label: 'My Department', icon: <Building2 className="w-4 h-4" />, description: 'Department-specific view', color: '#667EEA', roles: ['ceo', 'admin', 'doctor', 'nurse', 'technician'] },
+  { id: 'support', label: 'Support', icon: <UserCog className="w-4 h-4" />, description: 'Lab, pharmacy & services', color: '#17A2B8', roles: ['ceo', 'admin', 'technician', 'receptionist'] },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -24,6 +36,7 @@ const pageTitles: Record<string, string> = {
   '/reports': 'Analytics',
   '/patients': 'Patients',
   '/emergency': 'Emergency',
+  '/chat': 'Staff Chat',
   '/integrations': 'System Integrations',
   '/compliance': 'Compliance & Audit',
   '/settings': 'Settings',
@@ -32,8 +45,8 @@ const pageTitles: Record<string, string> = {
 export const Header: React.FC = () => {
   const location = useLocation();
   const [time, setTime] = useState(new Date());
-  const [currentView, setCurrentView] = useState<ViewMode>('operations');
   const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const { user } = useAuth();
   const {
     showNotifications,
     setShowNotifications,
@@ -46,13 +59,39 @@ export const Header: React.FC = () => {
   } = useAppStore();
   const { playSound } = useSoundEffects();
 
+  // Filter view modes based on user role
+  const viewModes = useMemo(() => {
+    if (!user) return allViewModes.slice(0, 1);
+    return allViewModes.filter(mode => mode.roles.includes(user.role));
+  }, [user]);
+
+  // Set default view based on role
+  const defaultView = useMemo(() => {
+    if (!user) return 'operations';
+    switch (user.role) {
+      case 'ceo': return 'executive';
+      case 'doctor': return 'clinical';
+      case 'nurse': return 'clinical';
+      case 'technician': return 'support';
+      case 'receptionist': return 'support';
+      case 'admin': return 'operations';
+      default: return 'department';
+    }
+  }, [user]);
+
+  const [currentView, setCurrentView] = useState<ViewMode>(defaultView);
+
+  useEffect(() => {
+    setCurrentView(defaultView);
+  }, [defaultView]);
+
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const currentViewData = viewModes.find((v) => v.id === currentView)!;
+  const currentViewData = viewModes.find((v) => v.id === currentView) || viewModes[0];
 
   const handleViewChange = (view: ViewMode) => {
     if (soundEnabled) playSound('success');

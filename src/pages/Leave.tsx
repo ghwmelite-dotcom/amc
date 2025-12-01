@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar, Check, X, Clock, Filter } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
@@ -6,24 +6,46 @@ import Button from '../components/common/Button';
 import Avatar from '../components/common/Avatar';
 import Badge from '../components/common/Badge';
 import { useAppStore } from '../stores/appStore';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../utils/formatters';
 import { LEAVE_TYPES } from '../utils/constants';
 
 const Leave: React.FC = () => {
   const { leaveRequests, approveLeave, rejectLeave, addToast } = useAppStore();
+  const { user, hasPermission } = useAuth();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
-  const filteredRequests = leaveRequests.filter((r) => filter === 'all' || r.status === filter);
+  const canApprove = hasPermission('canApproveLeave');
 
-  const pendingCount = leaveRequests.filter((r) => r.status === 'pending').length;
-  const approvedCount = leaveRequests.filter((r) => r.status === 'approved').length;
+  // Filter requests based on user permissions
+  const visibleRequests = useMemo(() => {
+    if (canApprove) {
+      // Managers can see all requests
+      return leaveRequests;
+    }
+    // Regular staff can only see their own requests
+    return leaveRequests.filter(r => r.staffId === user?.staffId);
+  }, [leaveRequests, canApprove, user?.staffId]);
+
+  const filteredRequests = visibleRequests.filter((r) => filter === 'all' || r.status === filter);
+
+  const pendingCount = visibleRequests.filter((r) => r.status === 'pending').length;
+  const approvedCount = visibleRequests.filter((r) => r.status === 'approved').length;
 
   const handleApprove = (id: string) => {
+    if (!canApprove) {
+      addToast('You do not have permission to approve leave requests', 'error');
+      return;
+    }
     approveLeave(id);
     addToast('Leave request approved', 'success');
   };
 
   const handleReject = (id: string) => {
+    if (!canApprove) {
+      addToast('You do not have permission to reject leave requests', 'error');
+      return;
+    }
     rejectLeave(id);
     addToast('Leave request rejected', 'info');
   };
@@ -167,7 +189,7 @@ const Leave: React.FC = () => {
               </div>
 
               {/* Actions */}
-              {request.status === 'pending' && (
+              {request.status === 'pending' && canApprove && (
                 <div className="flex gap-3">
                   <Button
                     variant="secondary"
@@ -186,6 +208,12 @@ const Leave: React.FC = () => {
                   >
                     Approve
                   </Button>
+                </div>
+              )}
+              {request.status === 'pending' && !canApprove && (
+                <div className="p-3 rounded-xl bg-amc-blue/10 border border-amc-blue/20 flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-amc-blue" />
+                  <span className="text-white/70">Awaiting manager approval</span>
                 </div>
               )}
             </Card3D>

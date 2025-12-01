@@ -1,5 +1,39 @@
 import { LucideIcon } from 'lucide-react';
 
+// User Role Types
+export type UserRole = 'ceo' | 'doctor' | 'nurse' | 'technician' | 'admin' | 'receptionist';
+
+export interface UserPermissions {
+  canViewDashboard: boolean;
+  canViewAllStaff: boolean;
+  canManageStaff: boolean;
+  canViewPatients: boolean;
+  canManagePatients: boolean;
+  canViewSchedule: boolean;
+  canManageSchedule: boolean;
+  canApproveLeave: boolean;
+  canViewReports: boolean;
+  canViewEmergency: boolean;
+  canManageEmergency: boolean;
+  canViewCompliance: boolean;
+  canManageCompliance: boolean;
+  canViewIntegrations: boolean;
+  canManageIntegrations: boolean;
+  canViewChat: boolean;
+  canAccessAdminSettings: boolean;
+}
+
+export interface AuthUser {
+  id: string;
+  staffId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  avatar: string;
+  permissions: UserPermissions;
+}
+
 export interface Staff {
   id: string;
   name: string;
@@ -116,4 +150,59 @@ export interface StatCardProps {
   trend: string;
   up: boolean;
   chartData: number[];
+}
+
+// Chat Types
+export type ChatChannelType = 'department' | 'group' | 'direct' | 'announcement';
+
+export interface ChatChannel {
+  id: string;
+  name: string;
+  type: ChatChannelType;
+  description?: string;
+  icon?: string;
+  color?: string;
+  members: string[]; // Staff IDs
+  createdAt: string;
+  lastActivity?: string;
+  unreadCount?: number;
+  isPinned?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  channelId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  senderRole: string;
+  content: string;
+  timestamp: string;
+  isEdited?: boolean;
+  replyTo?: string;
+  reactions?: Record<string, string[]>; // emoji -> list of user IDs
+  attachments?: ChatAttachment[];
+  isPinned?: boolean;
+  isSystem?: boolean;
+}
+
+export interface ChatAttachment {
+  id: string;
+  type: 'image' | 'file' | 'link';
+  name: string;
+  url: string;
+  size?: number;
+  preview?: string;
+}
+
+export interface OnlineStatus {
+  oderId: string;
+  status: 'online' | 'away' | 'busy' | 'offline';
+  lastSeen?: string;
+}
+
+export interface TypingIndicator {
+  oderId: string;
+  channelId: string;
+  timestamp: number;
 }

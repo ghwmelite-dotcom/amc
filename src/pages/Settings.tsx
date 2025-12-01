@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Bell, Volume2, Monitor, Info, Shield, Database, Globe } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
@@ -6,10 +7,37 @@ import Button from '../components/common/Button';
 import Avatar from '../components/common/Avatar';
 import Badge from '../components/common/Badge';
 import { useAppStore } from '../stores/appStore';
+import { useAuth } from '../contexts/AuthContext';
 import { HOSPITAL_INFO } from '../utils/constants';
+import { staffData } from '../data/mockData';
+
+const roleLabels: Record<string, string> = {
+  ceo: 'CEO / Chief Executive',
+  doctor: 'Doctor',
+  nurse: 'Nurse',
+  technician: 'Technician',
+  admin: 'Administrator',
+  receptionist: 'Receptionist',
+};
 
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const { soundEnabled, setSoundEnabled, addToast } = useAppStore();
+  const { user, logout } = useAuth();
+
+  // Get full staff data for the current user
+  const staffInfo = staffData.find(s => s.id === user?.staffId);
+
+  const handleLogout = () => {
+    addToast('Signing out...', 'info');
+    logout();
+    navigate('/login');
+  };
+
+  const staffType = user?.role === 'ceo' ? 'doctor' :
+                    user?.role === 'technician' ? 'tech' :
+                    user?.role === 'receptionist' ? 'admin' :
+                    user?.role || 'admin';
 
   const settingSections = [
     {
@@ -67,32 +95,34 @@ const Settings: React.FC = () => {
 
             <div className="flex items-start gap-6">
               <Avatar
-                name="Dr. Cynthia Opoku-Akoto"
-                initials="CO"
-                type="doctor"
+                name={user?.name || 'User'}
+                initials={user?.avatar || 'U'}
+                type={staffType as 'doctor' | 'nurse' | 'tech' | 'admin'}
                 size="xl"
               />
               <div className="flex-1 space-y-4">
                 <div>
-                  <div className="text-xl font-semibold">Dr. Cynthia Opoku-Akoto</div>
-                  <div className="text-white/50">CEO / Consultant Physician</div>
+                  <div className="text-xl font-semibold">{user?.name || 'User'}</div>
+                  <div className="text-white/50">{staffInfo?.role || roleLabels[user?.role || '']}</div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-white/40 mb-1">Email</div>
-                    <div className="text-sm">cynthia@accramedicalcentre.com</div>
+                    <div className="text-sm">{user?.email || 'Not set'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-white/40 mb-1">Phone</div>
-                    <div className="text-sm">+233 24 123 4567</div>
+                    <div className="text-sm">{staffInfo?.phone || 'Not set'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-white/40 mb-1">Department</div>
-                    <div className="text-sm">Administration</div>
+                    <div className="text-sm">{user?.department || 'Not assigned'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-white/40 mb-1">Role</div>
-                    <Badge variant="info">Administrator</Badge>
+                    <Badge variant={user?.role === 'ceo' ? 'warning' : user?.role === 'admin' ? 'info' : 'default'}>
+                      {roleLabels[user?.role || ''] || user?.role}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -274,7 +304,8 @@ const Settings: React.FC = () => {
       <div className="flex justify-between items-center pt-6 border-t border-white/10">
         <Button
           variant="ghost"
-          onClick={() => addToast('Logging out...', 'info')}
+          onClick={handleLogout}
+          className="text-amc-red hover:bg-amc-red/10"
         >
           Sign Out
         </Button>
