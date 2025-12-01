@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Grid, List, Mail, Phone, Award } from 'lucide-react';
+import { Search, Plus, Grid, List, Mail, Phone, Award, Edit2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
@@ -8,13 +8,42 @@ import Badge from '../components/common/Badge';
 import Modal from '../components/common/Modal';
 import { useAppStore } from '../stores/appStore';
 import { formatDate } from '../utils/formatters';
+import { Staff as StaffType } from '../types';
+
+const DEPARTMENT_OPTIONS = [
+  'Emergency', 'ICU/HDU', 'Laboratory', 'Pharmacy', 'Radiology',
+  'Paediatrics', 'Gynaecology', 'Internal Medicine', 'Nephrology',
+  'ENT', 'Ophthalmology', 'Gastroenterology', 'Administration', 'Front Desk'
+];
+
+const getInitials = (name: string) => {
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
 
 const Staff: React.FC = () => {
-  const { staff, openModal, activeModal, closeModal, modalData, addToast } = useAppStore();
+  const { staff, addStaff, updateStaff, openModal, activeModal, closeModal, modalData, addToast } = useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Add Staff Form State
+  const [newStaff, setNewStaff] = useState({
+    name: '',
+    role: '',
+    department: '',
+    type: 'doctor' as StaffType['type'],
+    email: '',
+    phone: '',
+    certifications: '',
+  });
+
+  // Edit Staff Form State
+  const [editStaff, setEditStaff] = useState<StaffType | null>(null);
 
   const departments = useMemo(() => {
     const depts = new Set(staff.map((s) => s.department));
@@ -33,9 +62,65 @@ const Staff: React.FC = () => {
     });
   }, [staff, searchQuery, filterDepartment, filterStatus]);
 
+  const resetNewStaffForm = () => {
+    setNewStaff({
+      name: '',
+      role: '',
+      department: '',
+      type: 'doctor',
+      email: '',
+      phone: '',
+      certifications: '',
+    });
+  };
+
   const handleAddStaff = () => {
-    addToast('Staff member added successfully', 'success');
+    if (!newStaff.name || !newStaff.role || !newStaff.department || !newStaff.email) {
+      addToast('Please fill in all required fields', 'error');
+      return;
+    }
+
+    const staffMember: StaffType = {
+      id: `staff_${Date.now()}`,
+      name: newStaff.name,
+      role: newStaff.role,
+      department: newStaff.department,
+      status: 'active',
+      avatar: getInitials(newStaff.name),
+      type: newStaff.type,
+      email: newStaff.email,
+      phone: newStaff.phone || '+233 XX XXX XXXX',
+      certifications: newStaff.certifications ? newStaff.certifications.split(',').map(c => c.trim()) : [],
+      joinDate: new Date().toISOString().split('T')[0],
+    };
+
+    addStaff(staffMember);
+    addToast(`${newStaff.name} added successfully`, 'success');
+    resetNewStaffForm();
     closeModal();
+  };
+
+  const handleEditStaff = () => {
+    if (!editStaff) return;
+
+    updateStaff(editStaff.id, {
+      name: editStaff.name,
+      role: editStaff.role,
+      department: editStaff.department,
+      email: editStaff.email,
+      phone: editStaff.phone,
+      status: editStaff.status,
+      certifications: editStaff.certifications,
+    });
+
+    addToast(`${editStaff.name} updated successfully`, 'success');
+    setEditStaff(null);
+    closeModal();
+  };
+
+  const openEditModal = (staffMember: StaffType) => {
+    setEditStaff({ ...staffMember });
+    openModal('edit-staff', staffMember);
   };
 
   const selectedStaff = modalData as typeof staff[0] | null;
@@ -263,9 +348,107 @@ const Staff: React.FC = () => {
               <Button variant="secondary" onClick={closeModal}>
                 Close
               </Button>
-              <Button onClick={() => addToast('Edit feature coming soon', 'info')}>
+              <Button onClick={() => openEditModal(selectedStaff)} icon={<Edit2 className="w-4 h-4" />}>
                 Edit Profile
               </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        isOpen={activeModal === 'edit-staff' && !!editStaff}
+        onClose={() => { setEditStaff(null); closeModal(); }}
+        title="Edit Staff Member"
+        size="lg"
+      >
+        {editStaff && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editStaff.name}
+                  onChange={(e) => setEditStaff({ ...editStaff, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Role *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editStaff.role}
+                  onChange={(e) => setEditStaff({ ...editStaff, role: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Department *</label>
+                <select
+                  className="input-field"
+                  value={editStaff.department}
+                  onChange={(e) => setEditStaff({ ...editStaff, department: e.target.value })}
+                  required
+                >
+                  {DEPARTMENT_OPTIONS.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Status</label>
+                <select
+                  className="input-field"
+                  value={editStaff.status}
+                  onChange={(e) => setEditStaff({ ...editStaff, status: e.target.value as StaffType['status'] })}
+                >
+                  <option value="active">Active</option>
+                  <option value="on-leave">On Leave</option>
+                  <option value="off-duty">Off Duty</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Email *</label>
+                <input
+                  type="email"
+                  className="input-field"
+                  value={editStaff.email}
+                  onChange={(e) => setEditStaff({ ...editStaff, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Phone</label>
+                <input
+                  type="tel"
+                  className="input-field"
+                  value={editStaff.phone}
+                  onChange={(e) => setEditStaff({ ...editStaff, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-white/60 mb-2">Certifications (comma-separated)</label>
+              <input
+                type="text"
+                className="input-field"
+                value={editStaff.certifications.join(', ')}
+                onChange={(e) => setEditStaff({
+                  ...editStaff,
+                  certifications: e.target.value.split(',').map(c => c.trim()).filter(Boolean)
+                })}
+                placeholder="MD, BLS, ACLS"
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="secondary" onClick={() => { setEditStaff(null); closeModal(); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditStaff}>Save Changes</Button>
             </div>
           </div>
         )}
@@ -274,40 +457,52 @@ const Staff: React.FC = () => {
       {/* Add Staff Modal */}
       <Modal
         isOpen={activeModal === 'add-staff'}
-        onClose={closeModal}
+        onClose={() => { resetNewStaffForm(); closeModal(); }}
         title="Add New Staff"
         size="lg"
       >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleAddStaff();
-          }}
-          className="space-y-4"
-        >
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-white/60 mb-2">Full Name</label>
-              <input type="text" className="input-field" placeholder="Enter full name" required />
+              <label className="block text-sm text-white/60 mb-2">Full Name *</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Enter full name"
+                value={newStaff.name}
+                onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+              />
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Role</label>
-              <input type="text" className="input-field" placeholder="Enter role" required />
+              <label className="block text-sm text-white/60 mb-2">Role *</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="e.g., Medical Officer, Nurse"
+                value={newStaff.role}
+                onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
+              />
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Department</label>
-              <select className="input-field" required>
+              <label className="block text-sm text-white/60 mb-2">Department *</label>
+              <select
+                className="input-field"
+                value={newStaff.department}
+                onChange={(e) => setNewStaff({ ...newStaff, department: e.target.value })}
+              >
                 <option value="">Select department</option>
-                {departments.filter((d) => d !== 'all').map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
+                {DEPARTMENT_OPTIONS.map((dept) => (
+                  <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Staff Type</label>
-              <select className="input-field" required>
+              <label className="block text-sm text-white/60 mb-2">Staff Type *</label>
+              <select
+                className="input-field"
+                value={newStaff.type}
+                onChange={(e) => setNewStaff({ ...newStaff, type: e.target.value as StaffType['type'] })}
+              >
                 <option value="doctor">Doctor</option>
                 <option value="nurse">Nurse</option>
                 <option value="tech">Technician</option>
@@ -315,21 +510,43 @@ const Staff: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-white/60 mb-2">Email</label>
-              <input type="email" className="input-field" placeholder="email@amc.gh" required />
+              <label className="block text-sm text-white/60 mb-2">Email *</label>
+              <input
+                type="email"
+                className="input-field"
+                placeholder="email@amc.gh"
+                value={newStaff.email}
+                onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm text-white/60 mb-2">Phone</label>
-              <input type="tel" className="input-field" placeholder="+233 XX XXX XXXX" required />
+              <input
+                type="tel"
+                className="input-field"
+                placeholder="+233 XX XXX XXXX"
+                value={newStaff.phone}
+                onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
+              />
             </div>
           </div>
+          <div>
+            <label className="block text-sm text-white/60 mb-2">Certifications (comma-separated)</label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="MD, BLS, ACLS"
+              value={newStaff.certifications}
+              onChange={(e) => setNewStaff({ ...newStaff, certifications: e.target.value })}
+            />
+          </div>
           <div className="flex justify-end gap-3 mt-6">
-            <Button variant="secondary" onClick={closeModal} type="button">
+            <Button variant="secondary" onClick={() => { resetNewStaffForm(); closeModal(); }}>
               Cancel
             </Button>
-            <Button type="submit">Add Staff</Button>
+            <Button onClick={handleAddStaff}>Add Staff</Button>
           </div>
-        </form>
+        </div>
       </Modal>
     </div>
   );

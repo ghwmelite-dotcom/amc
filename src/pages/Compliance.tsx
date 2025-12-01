@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Shield, CheckCircle, XCircle, AlertTriangle, Clock, FileText,
   Award, Calendar, Download, Eye, ChevronRight, Lock,
-  ClipboardCheck, Building2, Activity, TrendingUp
+  ClipboardCheck, Building2, Activity, TrendingUp, Search, X
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
+import Modal from '../components/common/Modal';
 import DonutChart from '../components/charts/DonutChart';
 import { useAppStore } from '../stores/appStore';
 
@@ -45,6 +46,10 @@ interface Certification {
 const Compliance: React.FC = () => {
   const { addToast } = useAppStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'checklist' | 'certifications' | 'audit'>('overview');
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditSearchTerm, setAuditSearchTerm] = useState('');
+  const [auditStatusFilter, setAuditStatusFilter] = useState<'all' | 'success' | 'warning' | 'error'>('all');
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const complianceItems: ComplianceItem[] = [
     { id: '1', category: 'GHS Reporting', requirement: 'Monthly patient statistics submission', status: 'compliant', dueDate: '2025-12-01', lastChecked: '2025-11-28', owner: 'Dr. Opoku-Akoto', priority: 'high' },
@@ -83,6 +88,30 @@ const Compliance: React.FC = () => {
   const pendingCount = complianceItems.filter(i => i.status === 'pending' || i.status === 'in-progress').length;
   const validCerts = certifications.filter(c => c.status === 'valid').length;
   const expiringCerts = certifications.filter(c => c.status === 'expiring').length;
+
+  // Extended audit logs for the full viewer
+  const extendedAuditLogs: AuditLog[] = [
+    ...auditLogs,
+    { id: '9', timestamp: '2025-11-30 11:15:00', user: 'Dr. A. Mensah', action: 'Viewed patient history', resource: 'Patient #11234', status: 'success', ipAddress: '192.168.1.78' },
+    { id: '10', timestamp: '2025-11-30 10:45:22', user: 'Lab Tech', action: 'Uploaded lab results', resource: 'Lab #4521', status: 'success', ipAddress: '192.168.1.92' },
+    { id: '11', timestamp: '2025-11-30 10:30:15', user: 'Admin User', action: 'System configuration change', resource: 'Settings', status: 'warning', ipAddress: '192.168.1.10' },
+    { id: '12', timestamp: '2025-11-30 09:55:00', user: 'Pharmacy', action: 'Dispensed medication', resource: 'Prescription #8934', status: 'success', ipAddress: '192.168.1.55' },
+    { id: '13', timestamp: '2025-11-30 09:20:33', user: 'Unknown', action: 'Failed authentication', resource: 'Login', status: 'error', ipAddress: '103.45.67.89' },
+    { id: '14', timestamp: '2025-11-29 23:45:00', user: 'System', action: 'Nightly backup', resource: 'Database', status: 'success', ipAddress: 'localhost' },
+    { id: '15', timestamp: '2025-11-29 22:30:11', user: 'Dr. K. Boateng', action: 'Emergency access', resource: 'Patient #12001', status: 'warning', ipAddress: '192.168.1.34' },
+    { id: '16', timestamp: '2025-11-29 21:15:45', user: 'Nurse E. Ansah', action: 'Updated vitals', resource: 'Patient #11890', status: 'success', ipAddress: '192.168.1.67' },
+  ];
+
+  const filteredAuditLogs = useMemo(() => {
+    return extendedAuditLogs.filter(log => {
+      const matchesSearch = auditSearchTerm === '' ||
+        log.user.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+        log.action.toLowerCase().includes(auditSearchTerm.toLowerCase()) ||
+        log.resource.toLowerCase().includes(auditSearchTerm.toLowerCase());
+      const matchesStatus = auditStatusFilter === 'all' || log.status === auditStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [extendedAuditLogs, auditSearchTerm, auditStatusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -438,7 +467,7 @@ const Compliance: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 icon={<Eye className="w-4 h-4" />}
-                onClick={() => addToast('Full audit log viewer coming soon', 'info')}
+                onClick={() => setShowAuditModal(true)}
               >
                 View Full Log
               </Button>
@@ -483,6 +512,187 @@ const Compliance: React.FC = () => {
           </div>
         </Card3D>
       )}
+
+      {/* Full Audit Log Viewer Modal */}
+      <Modal
+        isOpen={showAuditModal}
+        onClose={() => {
+          setShowAuditModal(false);
+          setSelectedLog(null);
+          setAuditSearchTerm('');
+          setAuditStatusFilter('all');
+        }}
+        title="Full Audit Log Viewer"
+        size="xl"
+      >
+        <div className="space-y-4">
+          {/* Search and Filter Bar */}
+          <div className="flex gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <input
+                type="text"
+                placeholder="Search by user, action, or resource..."
+                value={auditSearchTerm}
+                onChange={(e) => setAuditSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amc-teal"
+              />
+              {auditSearchTerm && (
+                <button
+                  onClick={() => setAuditSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                >
+                  <X className="w-4 h-4 text-white/40 hover:text-white" />
+                </button>
+              )}
+            </div>
+            <select
+              value={auditStatusFilter}
+              onChange={(e) => setAuditStatusFilter(e.target.value as typeof auditStatusFilter)}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amc-teal"
+            >
+              <option value="all">All Status</option>
+              <option value="success">Success</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/50">
+              Showing {filteredAuditLogs.length} of {extendedAuditLogs.length} entries
+            </span>
+            <div className="flex gap-2">
+              <Badge variant="success">{extendedAuditLogs.filter(l => l.status === 'success').length} Success</Badge>
+              <Badge variant="warning">{extendedAuditLogs.filter(l => l.status === 'warning').length} Warning</Badge>
+              <Badge variant="danger">{extendedAuditLogs.filter(l => l.status === 'error').length} Error</Badge>
+            </div>
+          </div>
+
+          {/* Log List */}
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
+            {/* Header */}
+            <div className="grid grid-cols-[160px_120px_1fr_120px_100px_80px] gap-3 px-4 py-2 text-xs font-medium text-white/40 border-b border-white/10 sticky top-0 bg-[#0D1117]">
+              <div>Timestamp</div>
+              <div>User</div>
+              <div>Action</div>
+              <div>Resource</div>
+              <div>IP Address</div>
+              <div>Status</div>
+            </div>
+
+            {filteredAuditLogs.map((log) => (
+              <div
+                key={log.id}
+                onClick={() => setSelectedLog(selectedLog?.id === log.id ? null : log)}
+                className={clsx(
+                  'rounded-lg cursor-pointer transition-all',
+                  selectedLog?.id === log.id ? 'bg-amc-teal/10 border border-amc-teal/30' : 'bg-white/[0.02] hover:bg-white/[0.04] border border-transparent'
+                )}
+              >
+                <div className="grid grid-cols-[160px_120px_1fr_120px_100px_80px] gap-3 px-4 py-3 items-center text-sm">
+                  <div className="text-white/60 font-mono text-xs">{log.timestamp}</div>
+                  <div className="font-medium truncate">{log.user}</div>
+                  <div className="text-white/70">{log.action}</div>
+                  <div className="text-white/50 truncate">{log.resource}</div>
+                  <div className="text-white/40 font-mono text-xs">{log.ipAddress}</div>
+                  <div>{getStatusIcon(log.status)}</div>
+                </div>
+
+                {/* Expanded Details */}
+                {selectedLog?.id === log.id && (
+                  <div className="px-4 pb-4 pt-2 border-t border-white/5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-xs text-white/40 mb-1">Full Details</div>
+                        <div className="p-3 rounded-lg bg-white/5 text-sm">
+                          <p><span className="text-white/50">Event ID:</span> <span className="font-mono">{log.id}</span></p>
+                          <p><span className="text-white/50">Timestamp:</span> {log.timestamp}</p>
+                          <p><span className="text-white/50">User:</span> {log.user}</p>
+                          <p><span className="text-white/50">Action:</span> {log.action}</p>
+                          <p><span className="text-white/50">Resource:</span> {log.resource}</p>
+                          <p><span className="text-white/50">IP Address:</span> {log.ipAddress}</p>
+                          <p><span className="text-white/50">Status:</span> <span className={getStatusColor(log.status)}>{log.status}</span></p>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-white/40 mb-1">Actions</div>
+                        <div className="space-y-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              addToast('Log exported', 'success');
+                            }}
+                          >
+                            Export This Entry
+                          </Button>
+                          {log.status === 'error' && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                addToast('Security alert created', 'info');
+                              }}
+                            >
+                              Create Security Alert
+                            </Button>
+                          )}
+                          {log.status === 'warning' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                addToast('Incident marked as reviewed', 'success');
+                              }}
+                            >
+                              Mark as Reviewed
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {filteredAuditLogs.length === 0 && (
+              <div className="text-center py-12 text-white/40">
+                <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No audit logs match your search criteria</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex justify-between pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2 text-sm text-white/50">
+              <Lock className="w-4 h-4" />
+              <span>Logs encrypted with AES-256</span>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                icon={<Download className="w-4 h-4" />}
+                onClick={() => addToast('Exporting filtered logs...', 'info')}
+              >
+                Export Filtered ({filteredAuditLogs.length})
+              </Button>
+              <Button
+                icon={<Download className="w-4 h-4" />}
+                onClick={() => addToast('Exporting all logs...', 'info')}
+              >
+                Export All ({extendedAuditLogs.length})
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

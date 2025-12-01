@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Filter, Users, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
+import Badge from '../components/common/Badge';
+import Modal from '../components/common/Modal';
+import Avatar from '../components/common/Avatar';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useAppStore } from '../stores/appStore';
 import { getShiftColor } from '../utils/formatters';
+import { staffData, departmentData } from '../data/mockData';
 
 const Schedule: React.FC = () => {
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1)); // November 2025
-  const { soundEnabled, addToast } = useAppStore();
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 11, 1)); // December 2025
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    shiftType: 'all',
+    department: 'all',
+  });
+  const { soundEnabled, addToast, openModal, activeModal, closeModal } = useAppStore();
   const { playSound } = useSoundEffects();
 
   const monthNames = [
@@ -96,9 +106,14 @@ const Schedule: React.FC = () => {
           <Button
             variant="secondary"
             icon={<Filter className="w-4 h-4" />}
-            onClick={() => addToast('Filter options coming soon', 'info')}
+            onClick={() => setShowFilters(true)}
           >
             Filter
+            {(filters.shiftType !== 'all' || filters.department !== 'all') && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-amc-teal rounded-full">
+                {(filters.shiftType !== 'all' ? 1 : 0) + (filters.department !== 'all' ? 1 : 0)}
+              </span>
+            )}
           </Button>
 
           <Button
@@ -159,7 +174,8 @@ const Schedule: React.FC = () => {
                 intensity={15}
                 onClick={() => {
                   if (soundEnabled) playSound('click');
-                  addToast(`Selected: ${monthNames[currentDate.getMonth()]} ${day}`, 'info');
+                  setSelectedDay(day);
+                  openModal('day-detail');
                 }}
                 className={clsx(
                   'min-h-[120px] p-3 rounded-2xl cursor-pointer transition-all',
@@ -202,6 +218,185 @@ const Schedule: React.FC = () => {
           })}
         </div>
       </Card3D>
+
+      {/* Filter Modal */}
+      <Modal
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        title="Filter Schedule"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Shift Type
+            </label>
+            <select
+              value={filters.shiftType}
+              onChange={(e) => setFilters({ ...filters, shiftType: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amc-teal"
+            >
+              <option value="all">All Shifts</option>
+              <option value="morning">Morning (06:00 - 14:00)</option>
+              <option value="afternoon">Afternoon (14:00 - 22:00)</option>
+              <option value="night">Night (22:00 - 06:00)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              Department
+            </label>
+            <select
+              value={filters.department}
+              onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amc-teal"
+            >
+              <option value="all">All Departments</option>
+              {departmentData.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setFilters({ shiftType: 'all', department: 'all' });
+              }}
+            >
+              Clear Filters
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                setShowFilters(false);
+                addToast('Filters applied', 'success');
+              }}
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Day Detail Modal */}
+      <Modal
+        isOpen={activeModal === 'day-detail' && selectedDay !== null}
+        onClose={() => {
+          closeModal();
+          setSelectedDay(null);
+        }}
+        title={selectedDay ? `${monthNames[currentDate.getMonth()]} ${selectedDay}, ${currentDate.getFullYear()}` : 'Day Details'}
+        size="lg"
+      >
+        {selectedDay && (
+          <div className="space-y-6">
+            {/* Day Summary */}
+            <div className="grid grid-cols-3 gap-4">
+              {getShiftsForDay(selectedDay).map((shift, idx) => {
+                const colors = getShiftColor(shift.type);
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-xl"
+                    style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">
+                        {shift.type === 'morning' && '☀️'}
+                        {shift.type === 'afternoon' && '🌤'}
+                        {shift.type === 'night' && '🌙'}
+                      </span>
+                      <span className="font-medium capitalize" style={{ color: colors.text }}>
+                        {shift.type}
+                      </span>
+                    </div>
+                    <div className="text-2xl font-bold" style={{ color: colors.text }}>
+                      {shift.count}
+                    </div>
+                    <div className="text-sm text-white/50">Staff Scheduled</div>
+                  </div>
+                );
+              })}
+              {getShiftsForDay(selectedDay).length === 0 && (
+                <div className="col-span-3 text-center py-8 text-white/50">
+                  No shifts scheduled for this day
+                </div>
+              )}
+            </div>
+
+            {/* Scheduled Staff List */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-5 h-5 text-amc-teal" />
+                <h3 className="font-semibold">Scheduled Staff</h3>
+              </div>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                {staffData.slice(0, 8).map((staff, idx) => {
+                  const shiftTypes = ['morning', 'afternoon', 'night'] as const;
+                  const assignedShift = shiftTypes[idx % 3];
+                  const colors = getShiftColor(assignedShift);
+                  return (
+                    <div
+                      key={staff.id}
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar name={staff.name} type={staff.type} size="md" />
+                        <div>
+                          <div className="font-medium">{staff.name}</div>
+                          <div className="text-sm text-white/50">{staff.role}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="text-xs px-2 py-1 rounded-md"
+                          style={{ background: colors.bg, color: colors.text, border: `1px solid ${colors.border}` }}
+                        >
+                          {assignedShift === 'morning' && '☀️ 06:00-14:00'}
+                          {assignedShift === 'afternoon' && '🌤 14:00-22:00'}
+                          {assignedShift === 'night' && '🌙 22:00-06:00'}
+                        </span>
+                        <Badge variant={staff.status === 'active' ? 'success' : 'warning'}>
+                          {staff.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                icon={<Clock className="w-4 h-4" />}
+                onClick={() => {
+                  addToast('Opening shift editor...', 'info');
+                }}
+              >
+                Edit Shifts
+              </Button>
+              <Button
+                className="flex-1"
+                icon={<Download className="w-4 h-4" />}
+                onClick={() => {
+                  addToast('Day schedule exported', 'success');
+                }}
+              >
+                Export Day
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Shift Summary */}
       <div className="grid grid-cols-3 gap-6">

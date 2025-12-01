@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Phone, Truck, Heart, Activity, Users, Clock } from 'lucide-react';
+import { AlertTriangle, Phone, Truck, Heart, Activity, Users, Clock, PhoneCall, PhoneOff, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
+import Modal from '../components/common/Modal';
+import Avatar from '../components/common/Avatar';
 import DonutChart from '../components/charts/DonutChart';
 import { useAppStore } from '../stores/appStore';
 import { useSoundEffects } from '../hooks/useSoundEffects';
+
+interface EmergencyCase {
+  id: string;
+  patient: string;
+  age: number;
+  condition: string;
+  priority: 'critical' | 'high' | 'medium';
+  time: string;
+  status: string;
+}
+
+interface Contact {
+  name: string;
+  number: string;
+  icon: string;
+}
 
 const Emergency: React.FC = () => {
   const { soundEnabled, addToast } = useAppStore();
   const { playSound } = useSoundEffects();
   const [activeEmergencies, setActiveEmergencies] = useState(3);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [callInProgress, setCallInProgress] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [selectedCase, setSelectedCase] = useState<EmergencyCase | null>(null);
+  const [showCaseModal, setShowCaseModal] = useState(false);
 
   // Simulate real-time updates
   useEffect(() => {
@@ -24,7 +48,7 @@ const Emergency: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const emergencyCases = [
+  const emergencyCases: EmergencyCase[] = [
     { id: 'E001', patient: 'Kofi Mensah', age: 58, condition: 'Cardiac Arrest', priority: 'critical', time: '5 min', status: 'treating' },
     { id: 'E002', patient: 'Ama Boateng', age: 32, condition: 'Severe Trauma', priority: 'critical', time: '12 min', status: 'stabilizing' },
     { id: 'E003', patient: 'Yaw Asante', age: 45, condition: 'Respiratory Distress', priority: 'high', time: '20 min', status: 'monitoring' },
@@ -45,6 +69,48 @@ const Emergency: React.FC = () => {
     { id: 'AMB-02', status: 'en-route', location: 'Osu, Accra', eta: '8 min' },
     { id: 'AMB-03', status: 'returning', location: 'Korle-Bu', eta: '15 min' },
   ];
+
+  // Call duration timer
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval>;
+    if (callInProgress) {
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [callInProgress]);
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleContactClick = (contact: Contact) => {
+    setSelectedContact(contact);
+    setShowCallModal(true);
+    setCallDuration(0);
+  };
+
+  const startCall = () => {
+    if (soundEnabled) playSound('alert');
+    setCallInProgress(true);
+    addToast(`Connecting to ${selectedContact?.name}...`, 'info');
+  };
+
+  const endCall = () => {
+    setCallInProgress(false);
+    addToast(`Call ended - Duration: ${formatCallDuration(callDuration)}`, 'success');
+    setShowCallModal(false);
+    setSelectedContact(null);
+    setCallDuration(0);
+  };
+
+  const handleCaseClick = (emergency: EmergencyCase) => {
+    setSelectedCase(emergency);
+    setShowCaseModal(true);
+  };
 
   const handleEmergencyCall = () => {
     if (soundEnabled) playSound('alert');
@@ -126,8 +192,9 @@ const Emergency: React.FC = () => {
                 <Card3D
                   key={emergency.id}
                   intensity={10}
+                  onClick={() => handleCaseClick(emergency)}
                   className={clsx(
-                    'p-4 rounded-xl cursor-pointer',
+                    'p-4 rounded-xl cursor-pointer transition-all hover:scale-[1.01]',
                     emergency.priority === 'critical' && 'bg-amc-red/10 border border-amc-red/20',
                     emergency.priority === 'high' && 'bg-amc-orange/10 border border-amc-orange/20',
                     emergency.priority === 'medium' && 'bg-amc-yellow/10 border border-amc-yellow/20'
@@ -259,15 +326,15 @@ const Emergency: React.FC = () => {
               ].map((contact, i) => (
                 <button
                   key={i}
-                  onClick={() => addToast(`Calling ${contact.name}...`, 'info')}
-                  className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-3"
+                  onClick={() => handleContactClick(contact)}
+                  className="w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-3 group"
                 >
                   <span className="text-xl">{contact.icon}</span>
                   <div className="text-left flex-1">
                     <div className="text-sm font-medium">{contact.name}</div>
                     <div className="text-xs text-white/50">{contact.number}</div>
                   </div>
-                  <Phone className="w-4 h-4 text-amc-green" />
+                  <Phone className="w-4 h-4 text-amc-green group-hover:animate-pulse" />
                 </button>
               ))}
             </div>
@@ -299,6 +366,210 @@ const Emergency: React.FC = () => {
           </Card3D>
         </div>
       </div>
+
+      {/* Call Modal */}
+      <Modal
+        isOpen={showCallModal}
+        onClose={() => {
+          if (callInProgress) {
+            endCall();
+          } else {
+            setShowCallModal(false);
+            setSelectedContact(null);
+          }
+        }}
+        title={callInProgress ? 'Call in Progress' : 'Contact'}
+        size="sm"
+      >
+        {selectedContact && (
+          <div className="text-center space-y-6">
+            {/* Contact Icon */}
+            <div className="flex justify-center">
+              <div
+                className={clsx(
+                  'w-24 h-24 rounded-full flex items-center justify-center text-5xl transition-all',
+                  callInProgress ? 'bg-amc-green/20 animate-pulse' : 'bg-white/10'
+                )}
+              >
+                {selectedContact.icon}
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h3 className="text-xl font-semibold">{selectedContact.name}</h3>
+              <p className="text-white/60">{selectedContact.number}</p>
+            </div>
+
+            {/* Call Duration */}
+            {callInProgress && (
+              <div className="text-3xl font-mono text-amc-green">
+                {formatCallDuration(callDuration)}
+              </div>
+            )}
+
+            {/* Call Actions */}
+            <div className="flex gap-4 justify-center pt-4">
+              {!callInProgress ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowCallModal(false);
+                      setSelectedContact(null);
+                    }}
+                    className="w-32"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={startCall}
+                    className="w-32 bg-amc-green hover:bg-amc-green/80"
+                    icon={<PhoneCall className="w-4 h-4" />}
+                  >
+                    Call
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    onClick={() => addToast('Muted', 'info')}
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                  </button>
+                  <button
+                    className="w-14 h-14 rounded-full bg-amc-red hover:bg-amc-red/80 flex items-center justify-center transition-colors"
+                    onClick={endCall}
+                  >
+                    <PhoneOff className="w-6 h-6" />
+                  </button>
+                  <button
+                    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    onClick={() => addToast('Speaker on', 'info')}
+                  >
+                    <Phone className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Case Detail Modal */}
+      <Modal
+        isOpen={showCaseModal && selectedCase !== null}
+        onClose={() => {
+          setShowCaseModal(false);
+          setSelectedCase(null);
+        }}
+        title={`Emergency Case: ${selectedCase?.id || ''}`}
+        size="lg"
+      >
+        {selectedCase && (
+          <div className="space-y-6">
+            {/* Patient Info */}
+            <div className="flex items-center gap-4 pb-4 border-b border-white/10">
+              <Avatar name={selectedCase.patient} type="nurse" size="xl" />
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">{selectedCase.patient}</h2>
+                <p className="text-white/60">{selectedCase.age} years old</p>
+              </div>
+              <Badge
+                variant={
+                  selectedCase.priority === 'critical'
+                    ? 'danger'
+                    : selectedCase.priority === 'high'
+                      ? 'warning'
+                      : 'info'
+                }
+              >
+                {selectedCase.priority.toUpperCase()}
+              </Badge>
+            </div>
+
+            {/* Case Details */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 rounded-xl">
+                <div className="text-sm text-white/50 mb-1">Condition</div>
+                <div className="font-semibold text-amc-red">{selectedCase.condition}</div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl">
+                <div className="text-sm text-white/50 mb-1">Status</div>
+                <div className="font-semibold capitalize">{selectedCase.status}</div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl">
+                <div className="text-sm text-white/50 mb-1">Time in ER</div>
+                <div className="font-semibold">{selectedCase.time}</div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-xl">
+                <div className="text-sm text-white/50 mb-1">Assigned Bed</div>
+                <div className="font-semibold">ICU Bed 2</div>
+              </div>
+            </div>
+
+            {/* Assigned Staff */}
+            <div>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="w-4 h-4 text-amc-teal" />
+                Assigned Team
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { name: 'Dr. Kwame Asante', role: 'Lead Physician' },
+                  { name: 'Abena Mensah', role: 'ER Nurse' },
+                ].map((staff, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={staff.name} type="doctor" size="sm" />
+                      <div>
+                        <div className="font-medium text-sm">{staff.name}</div>
+                        <div className="text-xs text-white/50">{staff.role}</div>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={() => handleContactClick({ name: staff.name, number: '+233 XX XXX XXXX', icon: '👨‍⚕️' })}>
+                      <Phone className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  addToast('Transfer request initiated', 'info');
+                }}
+              >
+                Transfer Patient
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                onClick={() => {
+                  addToast('Code Blue activated!', 'error');
+                  if (soundEnabled) playSound('alert');
+                }}
+              >
+                Code Blue
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  addToast('Patient status updated', 'success');
+                  setShowCaseModal(false);
+                }}
+              >
+                Update Status
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

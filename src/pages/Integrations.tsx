@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import {
   Database, Server, Cloud, Shield, RefreshCw, CheckCircle,
   XCircle, AlertTriangle, Settings, Activity, Zap, Link2,
-  FileText, CreditCard, Pill, FlaskConical, Users, Building2
+  FileText, CreditCard, Pill, FlaskConical, Users, Building2,
+  Eye, EyeOff, Copy, ExternalLink
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
+import Modal from '../components/common/Modal';
 import { useAppStore } from '../stores/appStore';
 
 interface Integration {
@@ -26,6 +28,15 @@ interface Integration {
 const Integrations: React.FC = () => {
   const { addToast } = useAppStore();
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [configForm, setConfigForm] = useState({
+    apiKey: '',
+    apiSecret: '',
+    endpoint: '',
+    webhookUrl: '',
+  });
 
   const integrations: Integration[] = [
     {
@@ -135,8 +146,31 @@ const Integrations: React.FC = () => {
     }, 2000);
   };
 
-  const handleConfigure = (name: string) => {
-    addToast(`Opening configuration for ${name}...`, 'info');
+  const handleConfigure = (integration: Integration) => {
+    setSelectedIntegration(integration);
+    setShowConfigModal(true);
+    setShowApiKey(false);
+    setConfigForm({
+      apiKey: '',
+      apiSecret: '',
+      endpoint: integration.id === 'ghs' ? 'https://api.ghs.gov.gh/v1/' : 'https://api.example.com/v1/',
+      webhookUrl: `https://amc-hub.example.com/webhooks/${integration.id}`,
+    });
+  };
+
+  const handleSaveConfig = () => {
+    if (!configForm.apiKey || !configForm.apiSecret) {
+      addToast('Please fill in all required fields', 'error');
+      return;
+    }
+    addToast(`${selectedIntegration?.name} configured successfully!`, 'success');
+    setShowConfigModal(false);
+    setSelectedIntegration(null);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    addToast(`${label} copied to clipboard`, 'success');
   };
 
   const getStatusColor = (status: Integration['status']) => {
@@ -356,7 +390,7 @@ const Integrations: React.FC = () => {
                     variant="primary"
                     size="sm"
                     icon={<Settings className="w-4 h-4" />}
-                    onClick={() => handleConfigure(integration.name)}
+                    onClick={() => handleConfigure(integration)}
                     className="w-full mt-2"
                   >
                     Configure Integration
@@ -410,6 +444,175 @@ const Integrations: React.FC = () => {
           ))}
         </div>
       </Card3D>
+
+      {/* Configuration Modal */}
+      <Modal
+        isOpen={showConfigModal && selectedIntegration !== null}
+        onClose={() => {
+          setShowConfigModal(false);
+          setSelectedIntegration(null);
+        }}
+        title={`Configure ${selectedIntegration?.name || 'Integration'}`}
+        size="lg"
+      >
+        {selectedIntegration && (
+          <div className="space-y-6">
+            {/* Integration Header */}
+            <div className="flex items-center gap-4 pb-4 border-b border-white/10">
+              <div className="w-14 h-14 rounded-xl bg-amc-purple/20 text-amc-purple flex items-center justify-center">
+                {selectedIntegration.icon}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">{selectedIntegration.name}</h3>
+                <p className="text-sm text-white/60">{selectedIntegration.description}</p>
+              </div>
+              <Badge variant="warning">Not Configured</Badge>
+            </div>
+
+            {/* API Credentials */}
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Shield className="w-4 h-4 text-amc-teal" />
+                API Credentials
+              </h4>
+
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  API Key <span className="text-amc-red">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={configForm.apiKey}
+                    onChange={(e) => setConfigForm({ ...configForm, apiKey: e.target.value })}
+                    placeholder="Enter your API key"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white placeholder-white/30 focus:outline-none focus:border-amc-teal"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4 text-white/50" /> : <Eye className="w-4 h-4 text-white/50" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  API Secret <span className="text-amc-red">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={configForm.apiSecret}
+                  onChange={(e) => setConfigForm({ ...configForm, apiSecret: e.target.value })}
+                  placeholder="Enter your API secret"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amc-teal"
+                />
+              </div>
+            </div>
+
+            {/* Endpoint Configuration */}
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Server className="w-4 h-4 text-amc-blue" />
+                Endpoint Configuration
+              </h4>
+
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  API Endpoint
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={configForm.endpoint}
+                    onChange={(e) => setConfigForm({ ...configForm, endpoint: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white focus:outline-none focus:border-amc-teal"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(configForm.endpoint, 'Endpoint')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <Copy className="w-4 h-4 text-white/50" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Webhook URL (for receiving updates)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={configForm.webhookUrl}
+                    readOnly
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-20 text-white/50 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(configForm.webhookUrl, 'Webhook URL')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <Copy className="w-4 h-4 text-white/50" />
+                  </button>
+                </div>
+                <p className="text-xs text-white/40 mt-1">
+                  Add this URL to your external system to receive real-time updates
+                </p>
+              </div>
+            </div>
+
+            {/* Documentation Link */}
+            <div className="p-4 rounded-xl bg-amc-blue/10 border border-amc-blue/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-amc-blue" />
+                  <div>
+                    <div className="font-medium">Integration Documentation</div>
+                    <div className="text-sm text-white/50">View setup guide and API reference</div>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<ExternalLink className="w-4 h-4" />}
+                  onClick={() => addToast('Opening documentation...', 'info')}
+                >
+                  View Docs
+                </Button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-white/10">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  addToast('Testing connection...', 'info');
+                  setTimeout(() => {
+                    if (configForm.apiKey && configForm.apiSecret) {
+                      addToast('Connection test successful!', 'success');
+                    } else {
+                      addToast('Connection test failed - missing credentials', 'error');
+                    }
+                  }, 1500);
+                }}
+              >
+                Test Connection
+              </Button>
+              <Button className="flex-1" onClick={handleSaveConfig}>
+                Save Configuration
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

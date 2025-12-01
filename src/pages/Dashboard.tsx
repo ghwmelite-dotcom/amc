@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
-import { Brain, TrendingUp, AlertTriangle, Users, BedDouble, Clock, Sparkles, Activity } from 'lucide-react';
+import { Brain, TrendingUp, AlertTriangle, Users, BedDouble, Clock, Sparkles, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
 import Card3D from '../components/common/Card3D';
 import StatCard from '../components/common/StatCard';
 import Avatar from '../components/common/Avatar';
@@ -9,14 +9,74 @@ import DonutChart from '../components/charts/DonutChart';
 import AnimatedLineChart from '../components/charts/AnimatedLineChart';
 import { useSoundEffects } from '../hooks/useSoundEffects';
 import { useAppStore } from '../stores/appStore';
-import { weekData, shiftData, departmentData, chartData } from '../data/mockData';
+import { shiftData, departmentData, chartData } from '../data/mockData';
 import { getShiftColor } from '../utils/formatters';
 
 const Dashboard: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState(0);
   const [aiInsightIndex, setAiInsightIndex] = useState(0);
-  const { notifications, soundEnabled } = useAppStore();
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, -1 = last week, 1 = next week
+  const { notifications, soundEnabled, addToast } = useAppStore();
   const { playSound } = useSoundEffects();
+
+  // Generate week data based on offset
+  const weekData = useMemo(() => {
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDayOfWeek + (weekOffset * 7));
+
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const generatedWeek = [];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+
+      const isToday = date.toDateString() === today.toDateString();
+      const isPast = date < today && !isToday;
+
+      // Generate somewhat realistic data
+      const baseCoverage = isPast ? Math.floor(Math.random() * 15) + 85 : Math.floor(Math.random() * 20) + 75;
+      const baseShifts = Math.floor(Math.random() * 30) + 120;
+      const alerts = isPast ? 0 : (Math.random() > 0.7 ? Math.floor(Math.random() * 3) + 1 : 0);
+
+      generatedWeek.push({
+        day: days[i],
+        date: date.getDate(),
+        fullDate: date,
+        shifts: baseShifts,
+        coverage: baseCoverage,
+        alerts,
+        today: isToday,
+      });
+    }
+
+    return generatedWeek;
+  }, [weekOffset]);
+
+  const getWeekRangeLabel = () => {
+    if (weekData.length === 0) return '';
+    const start = weekData[0].fullDate;
+    const end = weekData[6].fullDate;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[start.getMonth()]} ${start.getDate()} - ${months[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    if (soundEnabled) playSound('click');
+    setWeekOffset(prev => direction === 'prev' ? prev - 1 : prev + 1);
+    setSelectedDay(0);
+    addToast(direction === 'prev' ? 'Viewing previous week' : 'Viewing next week', 'info');
+  };
+
+  const goToCurrentWeek = () => {
+    if (soundEnabled) playSound('click');
+    setWeekOffset(0);
+    // Find today in the week and select it
+    const todayIndex = weekData.findIndex(d => d.today);
+    setSelectedDay(todayIndex >= 0 ? todayIndex : 0);
+  };
 
   const handleDayClick = (index: number) => {
     if (soundEnabled) playSound('click');
@@ -235,20 +295,34 @@ const Dashboard: React.FC = () => {
             className="glass-card p-7 opacity-0 animate-fade-in-up animation-delay-400"
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold flex items-center gap-3">
-                <span className="opacity-60">📅</span>
-                Week Overview
-              </h2>
-              <div className="flex gap-2">
-                {['← Prev', 'Next →'].map((text, i) => (
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-semibold flex items-center gap-3">
+                  <span className="opacity-60">📅</span>
+                  Week Overview
+                </h2>
+                <span className="text-sm text-white/50">{getWeekRangeLabel()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigateWeek('prev')}
+                  className="p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                {weekOffset !== 0 && (
                   <button
-                    key={i}
-                    onClick={() => soundEnabled && playSound('click')}
-                    className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white hover:bg-white/10 transition-colors"
+                    onClick={goToCurrentWeek}
+                    className="px-3 py-2 rounded-xl bg-amc-teal/20 border border-amc-teal/30 text-sm text-amc-teal font-medium hover:bg-amc-teal/30 transition-colors"
                   >
-                    {text}
+                    Today
                   </button>
-                ))}
+                )}
+                <button
+                  onClick={() => navigateWeek('next')}
+                  className="p-2 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
