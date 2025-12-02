@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Clock, User, Building2, Phone, UserCheck } from 'lucide-react';
+import { Search, Plus, Clock, User, Building2, Phone, UserCheck, AlertTriangle, Zap, Shield } from 'lucide-react';
+import { clsx } from 'clsx';
 import Card3D from '../components/common/Card3D';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
@@ -7,7 +8,8 @@ import Modal from '../components/common/Modal';
 import { useAppStore } from '../stores/appStore';
 import { departmentData, appointmentData } from '../data/mockData';
 import { getStatusColor } from '../utils/formatters';
-import { Patient } from '../types';
+import { Patient, TriageResult } from '../types';
+import SmartTriagePanel from '../components/ai/SmartTriagePanel';
 
 const Patients: React.FC = () => {
   const { patients, addPatient, updatePatient, openModal, activeModal, closeModal, modalData, addToast } = useAppStore();
@@ -25,6 +27,9 @@ const Patients: React.FC = () => {
     visitReason: '',
   });
 
+  // Smart Triage state
+  const [triageResult, setTriageResult] = useState<TriageResult | null>(null);
+
   const resetForm = () => {
     setNewPatient({
       name: '',
@@ -34,6 +39,17 @@ const Patients: React.FC = () => {
       department: '',
       visitReason: '',
     });
+    setTriageResult(null);
+  };
+
+  const handleTriageComplete = (result: TriageResult) => {
+    setTriageResult(result);
+  };
+
+  const handleDepartmentSuggestion = (department: string) => {
+    if (!newPatient.department) {
+      setNewPatient(prev => ({ ...prev, department }));
+    }
   };
 
   const handleAddPatient = () => {
@@ -297,87 +313,163 @@ const Patients: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Patient Modal */}
+      {/* Add Patient Modal with Smart Triage */}
       <Modal
         isOpen={activeModal === 'add-patient'}
         onClose={() => { resetForm(); closeModal(); }}
         title="Register New Patient"
-        size="lg"
+        size="xl"
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Full Name *</label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Enter full name"
-                value={newPatient.name}
-                onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Patient Info Form */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/70 mb-4">
+              <User className="w-5 h-5 text-amc-teal" />
+              <span className="font-medium">Patient Information</span>
             </div>
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Age *</label>
-              <input
-                type="number"
-                className="input-field"
-                placeholder="Age"
-                min="0"
-                max="150"
-                value={newPatient.age}
-                onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Enter full name"
+                  value={newPatient.name}
+                  onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Age *</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  placeholder="Age"
+                  min="0"
+                  max="150"
+                  value={newPatient.age}
+                  onChange={(e) => setNewPatient({ ...newPatient, age: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Gender *</label>
+                <select
+                  className="input-field"
+                  value={newPatient.gender}
+                  onChange={(e) => setNewPatient({ ...newPatient, gender: e.target.value as Patient['gender'] })}
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-2">Phone</label>
+                <input
+                  type="tel"
+                  className="input-field"
+                  placeholder="+233 XX XXX XXXX"
+                  value={newPatient.phone}
+                  onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm text-white/60 mb-2">
+                  Department *
+                  {triageResult && (
+                    <span className="ml-2 text-amc-purple text-xs">
+                      (AI suggested: {triageResult.recommendedDepartment})
+                    </span>
+                  )}
+                </label>
+                <select
+                  className="input-field"
+                  value={newPatient.department}
+                  onChange={(e) => setNewPatient({ ...newPatient, department: e.target.value })}
+                >
+                  <option value="">Select department</option>
+                  {departmentData.map((d) => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm text-white/60 mb-2">Symptoms / Reason for Visit *</label>
+                <textarea
+                  className="input-field"
+                  rows={4}
+                  placeholder="Describe symptoms in detail for AI triage analysis... (e.g., chest pain, difficulty breathing, fever for 3 days)"
+                  value={newPatient.visitReason}
+                  onChange={(e) => setNewPatient({ ...newPatient, visitReason: e.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Gender *</label>
-              <select
-                className="input-field"
-                value={newPatient.gender}
-                onChange={(e) => setNewPatient({ ...newPatient, gender: e.target.value as Patient['gender'] })}
+
+            {/* Triage Result Summary in Form */}
+            {triageResult && (
+              <div
+                className={clsx(
+                  'p-4 rounded-xl border flex items-center gap-4 animate-fade-in',
+                  triageResult.priorityLevel === 'critical' && 'bg-red-500/10 border-red-500/30',
+                  triageResult.priorityLevel === 'high' && 'bg-orange-500/10 border-orange-500/30',
+                  triageResult.priorityLevel === 'medium' && 'bg-yellow-500/10 border-yellow-500/30',
+                  triageResult.priorityLevel === 'low' && 'bg-green-500/10 border-green-500/30'
+                )}
               >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Phone</label>
-              <input
-                type="tel"
-                className="input-field"
-                placeholder="+233 XX XXX XXXX"
-                value={newPatient.phone}
-                onChange={(e) => setNewPatient({ ...newPatient, phone: e.target.value })}
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-white/60 mb-2">Department *</label>
-              <select
-                className="input-field"
-                value={newPatient.department}
-                onChange={(e) => setNewPatient({ ...newPatient, department: e.target.value })}
-              >
-                <option value="">Select department</option>
-                {departmentData.map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-white/60 mb-2">Reason for Visit *</label>
-              <textarea
-                className="input-field"
-                rows={3}
-                placeholder="Describe symptoms or reason"
-                value={newPatient.visitReason}
-                onChange={(e) => setNewPatient({ ...newPatient, visitReason: e.target.value })}
-              />
+                <div
+                  className="w-14 h-14 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: `${triageResult.priorityColor}30` }}
+                >
+                  {triageResult.priorityLevel === 'critical' && <AlertTriangle className="w-7 h-7" style={{ color: triageResult.priorityColor }} />}
+                  {triageResult.priorityLevel === 'high' && <Zap className="w-7 h-7" style={{ color: triageResult.priorityColor }} />}
+                  {triageResult.priorityLevel === 'medium' && <Clock className="w-7 h-7" style={{ color: triageResult.priorityColor }} />}
+                  {triageResult.priorityLevel === 'low' && <Shield className="w-7 h-7" style={{ color: triageResult.priorityColor }} />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold uppercase" style={{ color: triageResult.priorityColor }}>
+                      {triageResult.priorityLevel} Priority
+                    </span>
+                    <Badge
+                      variant={triageResult.priorityLevel === 'critical' ? 'danger' : triageResult.priorityLevel === 'high' ? 'warning' : 'info'}
+                      size="sm"
+                    >
+                      Score: {triageResult.priorityScore}/10
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-white/60 mt-1">
+                    Est. Wait: {triageResult.estimatedWaitTime === 0 ? 'Immediate' : `~${triageResult.estimatedWaitTime} min`}
+                    {' • '}AI Confidence: {triageResult.aiConfidence}%
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+              <Button variant="secondary" onClick={() => { resetForm(); closeModal(); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddPatient}>
+                {triageResult && triageResult.priorityLevel === 'critical' ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Register URGENT
+                  </>
+                ) : (
+                  'Register Patient'
+                )}
+              </Button>
             </div>
           </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="secondary" onClick={() => { resetForm(); closeModal(); }}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddPatient}>Register Patient</Button>
+
+          {/* Smart Triage Panel */}
+          <div className="border-l border-white/10 pl-6">
+            <SmartTriagePanel
+              symptoms={newPatient.visitReason}
+              age={parseInt(newPatient.age) || 30}
+              gender={newPatient.gender}
+              onTriageComplete={handleTriageComplete}
+              onDepartmentSuggestion={handleDepartmentSuggestion}
+            />
           </div>
         </div>
       </Modal>

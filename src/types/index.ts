@@ -206,3 +206,36 @@ export interface TypingIndicator {
   channelId: string;
   timestamp: number;
 }
+
+// AI Triage Types
+export interface TriageData {
+  symptoms: string;
+  vitalSigns?: {
+    temperature?: number;
+    heartRate?: number;
+    bloodPressureSystolic?: number;
+    bloodPressureDiastolic?: number;
+    oxygenSaturation?: number;
+    respiratoryRate?: number;
+  };
+  painLevel?: number; // 1-10
+  symptomDuration?: string;
+  additionalNotes?: string;
+}
+
+export interface TriageResult {
+  priorityScore: number;
+  priorityLevel: 'critical' | 'high' | 'medium' | 'low';
+  priorityColor: string;
+  estimatedWaitTime: number;
+  recommendedDepartment: string;
+  reasoning: string[];
+  alerts: string[];
+  aiConfidence: number;
+}
+
+export interface PatientWithTriage extends Patient {
+  triageData?: TriageData;
+  triageResult?: TriageResult;
+  triageTimestamp?: string;
+}

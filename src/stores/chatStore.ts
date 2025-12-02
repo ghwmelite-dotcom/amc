@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ChatChannel, ChatMessage } from '../types';
 import { staffData } from '../data/mockData';
+import { AI_BOT, isMentioningAI, extractAIQuery, generateChatResponse } from '../services/aiService';
 
 // Generate mock chat data
 const generateMockChannels = (): ChatChannel[] => {
@@ -302,6 +303,7 @@ interface ChatState {
   onlineUsers: Set<string>;
   typingUsers: Record<string, string[]>; // channelId -> userIds
   searchQuery: string;
+  aiTyping: boolean; // Track when AI is "thinking"
 
   // Actions
   setActiveChannel: (channelId: string) => void;
@@ -315,6 +317,8 @@ interface ChatState {
   setUserOnline: (userId: string, online: boolean) => void;
   setTyping: (channelId: string, userId: string, isTyping: boolean) => void;
   addChannel: (channel: ChatChannel) => void;
+  setAiTyping: (typing: boolean) => void;
+  addAIMessage: (channelId: string, content: string, responseType?: string) => void;
 }
 
 // Group messages by channel
@@ -330,14 +334,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
   channels: generateMockChannels(),
   messages: groupMessagesByChannel(generateMockMessages()),
   activeChannelId: null,
-  onlineUsers: new Set(['1', '2', '3', '5', '7', '8']), // Some users online by default
+  onlineUsers: new Set(['1', '2', '3', '5', '7', '8', AI_BOT.id]), // AI always online
   typingUsers: {},
   searchQuery: '',
+  aiTyping: false,
 
   setActiveChannel: (channelId) => {
     set({ activeChannelId: channelId });
     // Mark channel as read when opened
     get().markChannelRead(channelId);
+  },
+
+  setAiTyping: (typing) => set({ aiTyping: typing }),
+
+  addAIMessage: (channelId, content, _responseType = 'answer') => {
+    const aiMessage: ChatMessage = {
+      id: `msg_ai_${Date.now()}`,
+      channelId,
+      senderId: AI_BOT.id,
+      senderName: AI_BOT.name,
+      senderAvatar: AI_BOT.avatar,
+      senderRole: AI_BOT.role,
+      content,
+      timestamp: new Date().toISOString(),
+      isSystem: true,
+    };
+
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [channelId]: [...(state.messages[channelId] || []), aiMessage],
+      },
+      channels: state.channels.map(ch =>
+        ch.id === channelId ? { ...ch, lastActivity: aiMessage.timestamp } : ch
+      ),
+      aiTyping: false,
+    }));
   },
 
   sendMessage: (channelId, content, senderId, senderName, senderAvatar, senderRole, attachment) => {
@@ -368,6 +400,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
         ch.id === channelId ? { ...ch, lastActivity: newMessage.timestamp } : ch
       ),
     }));
+
+    // Check if message mentions AI and trigger response
+    if (isMentioningAI(content)) {
+      const query = extractAIQuery(content);
+      const channel = get().channels.find(ch => ch.id === channelId);
+      const recentMessages = get().messages[channelId]?.slice(-10).map(m => m.content) || [];
+
+      // Set AI as typing
+      set({ aiTyping: true });
+
+      // Generate AI response
+      generateChatResponse(query, {
+        channelName: channel?.name,
+        recentMessages,
+        userName: senderName,
+      }).then((response) => {
+        get().addAIMessage(channelId, response.content, response.type);
+      }).catch(() => {
+        get().addAIMessage(channelId, "I apologize, but I'm having trouble processing that request. Please try again.", 'error');
+      });
+    }
   },
 
   addReaction: (messageId, emoji, userId) => {

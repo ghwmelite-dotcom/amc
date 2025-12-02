@@ -509,6 +509,132 @@
   }
 }
 
+/* AI Component Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.6), 0 0 60px rgba(236, 72, 153, 0.3);
+  }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes brainPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes aiThinking {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 3s linear infinite;
+}
+
+.animate-brain-pulse {
+  animation: brainPulse 1.5s ease-in-out infinite;
+}
+
+.animate-ai-thinking {
+  background: linear-gradient(90deg, #8B5CF6, #EC4899, #8B5CF6);
+  background-size: 200% 100%;
+  animation: aiThinking 2s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* AI Message Gradient Border */
+.ai-gradient-border {
+  position: relative;
+}
+
+.ai-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, #8B5CF6, #EC4899, #8B5CF6);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0.5;
+}
+
+/* Triage Priority Pulse Animations */
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4);
+    border-color: rgba(255, 71, 87, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px rgba(255, 71, 87, 0.2);
+    border-color: rgba(255, 71, 87, 0.8);
+  }
+}
+
+@keyframes highPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 15px 3px rgba(255, 107, 53, 0.2);
+  }
+}
+
+.animate-critical-pulse {
+  animation: criticalPulse 1.5s ease-in-out infinite;
+}
+
+.animate-high-pulse {
+  animation: highPulse 2s ease-in-out infinite;
+}
+
+/* AI Badge Shimmer */
+.ai-badge-shimmer {
+  background: linear-gradient(90deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(236, 72, 153, 0.3) 50%,
+    rgba(139, 92, 246, 0.2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   *,
