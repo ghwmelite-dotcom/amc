@@ -15,6 +15,7 @@ import Reports from './pages/Reports';
 import Patients from './pages/Patients';
 import Emergency from './pages/Emergency';
 import Chat from './pages/Chat';
+import AIChat from './pages/AIChat';
 import Integrations from './pages/Integrations';
 import Compliance from './pages/Compliance';
 import Settings from './pages/Settings';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             <MainLayout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/ai-chat" element={<AIChat />} />
                 <Route
                   path="/schedule"
                   element={

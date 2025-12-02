@@ -14,7 +14,8 @@ import {
   Link2,
   Shield,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Bot,
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useSoundEffects } from '../../hooks/useSoundEffects';
@@ -33,6 +34,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', color: '#00D4AA', path: '/', permission: 'canViewDashboard' },
+  { id: 'ai-assistant', icon: Bot, label: 'AI Assistant', color: '#A855F7', path: '/ai-chat' },
   { id: 'schedule', icon: Calendar, label: 'Schedule', color: '#0066FF', path: '/schedule', permission: 'canViewSchedule' },
   { id: 'staff', icon: Users, label: 'Staff', color: '#667EEA', path: '/staff', permission: 'canViewAllStaff' },
   { id: 'departments', icon: Building2, label: 'Departments', color: '#FF6B35', path: '/departments' },

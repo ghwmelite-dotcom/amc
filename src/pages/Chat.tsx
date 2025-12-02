@@ -31,13 +31,11 @@ import Avatar from '../components/common/Avatar';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import AIMessageBubble from '../components/ai/AIMessageBubble';
 import { useChatStore } from '../stores/chatStore';
 import { useAppStore } from '../stores/appStore';
 import { useAuth } from '../contexts/AuthContext';
 import { ChatChannel } from '../types';
 import { staffData, departmentData } from '../data/mockData';
-import { AI_BOT } from '../services/aiService';
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🙏', '✅', '⚠️', '🚨'];
 const EXTENDED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🙏', '✅', '⚠️', '🚨', '👏', '🔥', '💯', '👀', '🤔', '😊', '🙌', '💪', '☕', '🏥'];
@@ -67,7 +65,6 @@ const Chat: React.FC = () => {
     onlineUsers,
     typingUsers,
     searchQuery,
-    aiTyping,
     setActiveChannel,
     sendMessage,
     addReaction,
@@ -468,17 +465,6 @@ const Chat: React.FC = () => {
     const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId ||
       new Date(message.timestamp).getTime() - new Date(prevMessage.timestamp).getTime() > 300000;
     const isSelected = selectedMessageId === message.id;
-
-    // Render AI messages with special component
-    if (message.senderId === AI_BOT.id) {
-      return (
-        <AIMessageBubble
-          key={message.id}
-          content={message.content}
-          timestamp={message.timestamp}
-        />
-      );
-    }
 
     return (
       <div
@@ -908,17 +894,8 @@ const Chat: React.FC = () => {
                 {channelMessages.map((msg, i) => renderMessage(msg, i))}
                 <div ref={messagesEndRef} />
 
-                {/* AI Typing indicator */}
-                {aiTyping && (
-                  <AIMessageBubble
-                    content=""
-                    timestamp={new Date().toISOString()}
-                    isTyping={true}
-                  />
-                )}
-
                 {/* Typing indicator */}
-                {channelTypingUsers.length > 0 && !aiTyping && (
+                {channelTypingUsers.length > 0 && (
                   <div className="px-3 md:px-4 py-2 text-sm text-white/50 flex items-center gap-2">
                     <div className="flex gap-1">
                       <div className="w-2 h-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: '0ms' }} />
